@@ -1,5 +1,6 @@
 import com.github.tkawachi.doctest.{ TestFramework => TFramework, Specs2, ScalaTest, TestGenerator }
 import sbt._, Keys._
+import xsbti.Position
 
 /**
  * Sbt plugin for doctest.
@@ -19,7 +20,8 @@ import sbt._, Keys._
 object DoctestPlugin extends Plugin {
   val doctestTestFramework = settingKey[String]("Test framework. Specify scalatest (default) or specs2.")
   val doctestWithDependencies = settingKey[Boolean]("Whether to include libraryDependencies to doctestSettings.")
-  val doctestGenTests = taskKey[Seq[File]]("Generates test files.")
+  val doctestGenTests = taskKey[(Seq[File], Seq[TestGenerator.Result])]("Generates test files.")
+  val enableSourcePositionMapper = settingKey[Boolean]("enable sourcePositionMapper")
 
   /**
    * Default libraryDependencies.
@@ -48,13 +50,13 @@ object DoctestPlugin extends Plugin {
       (managedSourceDirectories in Test).value.headOption match {
         case None =>
           streams.value.log.warn("managedSourceDirectories in Test is empty. Failed to generate tests")
-          Seq()
+          Nil -> Nil
         case Some(testDir) =>
           (unmanagedSources in Compile).value
             .filter(_.ext == "scala")
             .flatMap(TestGenerator(_, TFramework(doctestTestFramework.value)))
             .groupBy(r => r.pkg -> r.basename)
-            .flatMap {
+            .map {
               case ((pkg, basename), results) =>
                 results.zipWithIndex.map {
                   case (result, idx) =>
@@ -63,11 +65,22 @@ object DoctestPlugin extends Plugin {
                     val writeFile = new File(writeDir, writeBasename + "Doctest.scala")
                     IO.write(writeFile, result.testSource)
                     writeFile
-                }
-            }.toSeq
+                } -> results
+            }.foldLeft((Seq.empty[File], Seq.empty[TestGenerator.Result])) {
+              case ((a, b), (c, d)) => (a ++ c) -> (b ++ d)
+            }
       }
     },
-    sourceGenerators in Test += doctestGenTests.taskValue
+    sourcePositionMappers ++= {
+      if(enableSourcePositionMapper.value){
+        doctestGenTests.map{
+          _._2.flatMap{ _.positionMappers }
+        }
+      }else{
+        Nil: Seq[Position => Option[Position]]
+      }
+    },
+    sourceGenerators in Test += doctestGenTests.taskValue.map(_._1)
   )
 
   val doctestSettings = doctestGenSettings ++ Seq(

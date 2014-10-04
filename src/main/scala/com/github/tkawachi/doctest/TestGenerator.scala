@@ -1,11 +1,21 @@
 package com.github.tkawachi.doctest
 
 import java.io.File
+import xsbti.{Maybe, Position}
+import sbt.Logger.o2m
 import scala.io.Source
 import org.apache.commons.io.FilenameUtils
 
 object TestGenerator {
-  case class Result(pkg: Option[String], basename: String, testSource: String)
+
+  case class Result(pkg: Option[String], basename: String, testSource: String, srcFile: File, examples: Seq[ParsedDoctest]) {
+    def positionMappers: Seq[xsbti.Position => Option[xsbti.Position]] ={
+      examples.map{ parsedTest =>
+        parsedTest.components.map{
+        }.toMap.lift
+      }
+    }
+  }
 
   val extractor = new Extractor
 
@@ -24,7 +34,8 @@ object TestGenerator {
       .flatMap(comment => CommentParser(comment).right.toOption.filter(_.components.size > 0))
       .groupBy(_.pkg).map {
         case (pkg, examples) =>
-          Result(pkg, basename, testGen(framework).generate(basename, pkg, examples))
+          val gen = testGen(framework)
+          Result(pkg, basename, gen.generate(basename, pkg, examples), srcFile, examples)
       }.toSeq
   }
 }
