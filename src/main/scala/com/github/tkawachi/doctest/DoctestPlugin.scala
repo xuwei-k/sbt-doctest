@@ -20,6 +20,9 @@ object DoctestPlugin extends Plugin {
   val doctestTestFramework = settingKey[DoctestTestFramework]("Test framework. Specify ScalaCheck (default), Specs2 or ScalaTest.")
   val doctestWithDependencies = settingKey[Boolean]("Whether to include libraryDependencies to doctestSettings.")
   val doctestGenTests = taskKey[Seq[File]]("Generates test files.")
+  val doctestTransform = taskKey[PartialFunction[ParsedDoctest, ParsedDoctest]]("transform or filtering `ParsedDoctest`")
+
+  type DoctestTransform = PartialFunction[ParsedDoctest, ParsedDoctest]
 
   sealed abstract class DoctestTestFramework
 
@@ -53,6 +56,7 @@ object DoctestPlugin extends Plugin {
   val doctestGenSettings = Seq(
     doctestTestFramework := (doctestTestFramework ?? ScalaCheck).value,
     doctestWithDependencies := (doctestWithDependencies ?? true).value,
+    doctestTransform := { case doctest => doctest },
     doctestGenTests := {
       (managedSourceDirectories in Test).value.headOption match {
         case None =>
@@ -61,7 +65,7 @@ object DoctestPlugin extends Plugin {
         case Some(testDir) =>
           (unmanagedSources in Compile).value
             .filter(_.ext == "scala")
-            .flatMap(TestGenerator(_, doctestTestFramework.value))
+            .flatMap(TestGenerator(_, doctestTestFramework.value, doctestTransform.value))
             .groupBy(r => r.pkg -> r.basename)
             .flatMap {
               case ((pkg, basename), results) =>

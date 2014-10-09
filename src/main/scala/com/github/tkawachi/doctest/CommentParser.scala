@@ -117,7 +117,7 @@ object CommentParser extends PythonStyleParser with ReplStyleParser with Propert
   def apply(comment: ScaladocComment): Either[String, ParsedDoctest] =
     parse(comment.text) match {
       case Success(examples, _) =>
-        Right(ParsedDoctest(comment.pkg, comment.symbol, examples, comment.lineNo))
+        Right(ParsedDoctest(comment.pkg, comment.symbol, examples, comment.lineNo, Nil))
 
       case NoSuccess(msg, next) =>
         Left(s"$msg on line ${next.pos.line}, column ${next.pos.column}")
