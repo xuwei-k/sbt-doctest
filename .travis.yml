@@ -3,11 +3,12 @@ language: scala
 script:
   - sbt "++${TRAVIS_SCALA_VERSION}" "^^${SBT_VERSION}" test scripted
 
-jdk: oraclejdk8
+jdk:
+- oraclejdk8
+- oraclejdk10
+- openjdk11
 
-matrix:
-  include:
-  - env: SBT_VERSION="1.1.6"
-    scala: 2.12.6
+env: SBT_VERSION="1.1.6"
+scala: 2.12.6
 
 sudo: false
