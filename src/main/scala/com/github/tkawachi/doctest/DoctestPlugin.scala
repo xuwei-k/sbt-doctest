@@ -130,7 +130,7 @@ object DoctestPlugin extends AutoPlugin {
           val scalaTestVersion = doctestScalaTestVersion.value
             .orElse(
               TestGenResolver.findScalaTestVersionFromScalaBinaryVersion(
-                Classpaths.managedJars(Test, classpathTypes.value, update.value),
+                Classpaths.managedJars(Test, classpathTypes.value, update.value, fileConverter.value),
                 scalaBinaryVersion.value
               )
             )

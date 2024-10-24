@@ -7,11 +7,14 @@ import utest._
 
 object TestGenResolverSpec extends TestSuite {
   val tests = this {
+    val dummyFile = xsbti.HashedVirtualFileRef.of("", "")
     "findScalaTestVersion()" - {
       val result = TestGenResolver.findScalaTestVersion(
         Seq(
-          Attributed(file("."))(
-            AttributeMap(AttributeEntry(moduleID.key, ModuleID("org.scalatest", "scalatest_2.11", "3.0.0")))
+          Attributed(dummyFile)(
+            Map(Keys.moduleIDStr -> ModuleID("org.scalatest", "scalatest_2.11", "3.0.0")).view
+              .mapValues(sbt.Classpaths.moduleIdJsonKeyFormat.write)
+              .toMap
           )
         ),
         "2.11.12"
@@ -22,8 +25,10 @@ object TestGenResolverSpec extends TestSuite {
     "findScalaTestVersion() scalaVersion mismatch" - {
       val result = TestGenResolver.findScalaTestVersion(
         Seq(
-          Attributed(file("."))(
-            AttributeMap(AttributeEntry(moduleID.key, ModuleID("org.scalatest", "scalatest_2.11", "3.1.0")))
+          Attributed(dummyFile)(
+            Map(Keys.moduleIDStr -> ModuleID("org.scalatest", "scalatest_2.11", "3.1.0")).view
+              .mapValues(sbt.Classpaths.moduleIdJsonKeyFormat.write)
+              .toMap
           )
         ),
         "2.12.5"

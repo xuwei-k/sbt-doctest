@@ -46,7 +46,10 @@ object TestGenResolver {
       scalaBinaryVersion: String
   ): Option[String] = {
     testClasspath.flatMap { entry =>
-      entry.get(moduleID.key).flatMap(detectScalaTestVersion(_, scalaBinaryVersion))
+      entry.get(sbt.Keys.moduleIDStr).flatMap { str =>
+        val moduleId = sbt.Classpaths.moduleIdJsonKeyFormat.read(str)
+        detectScalaTestVersion(moduleId, scalaBinaryVersion)
+      }
     }.headOption
   }
 
