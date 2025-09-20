@@ -11,26 +11,26 @@ import scala.util.Try
 object TestGenResolver {
   def resolve(framework: DoctestTestFramework, scalaTestVersion: Option[String]): TestGen = {
     framework match {
-      case MicroTest => MicroTestGen
-      case Minitest => MinitestGen
+      case MicroTest => TestGen.MicroTestGen
+      case Minitest => TestGen.MinitestGen
       case ScalaTest =>
         scalaTestVersion
           .flatMap {
             _.split('.').take(2).flatMap(s => Try(s.toInt).toOption) match {
               case Array(major, minor) =>
                 if (major < 3 || major == 3 && minor == 0) {
-                  Some(ScalaTest30Gen)
+                  Some(TestGen.ScalaTest30Gen)
                 } else {
-                  Some(ScalaTest31Gen)
+                  Some(TestGen.ScalaTest31Gen)
                 }
               case _ =>
                 None
             }
           }
           .getOrElse(throw new MessageOnlyException(s"Unexpected doctestScalaTestVersion version: $scalaTestVersion"))
-      case Specs2 => Specs2TestGen
-      case ScalaCheck => ScalaCheckGen
-      case Munit => MunitGen
+      case Specs2 => TestGen.Specs2TestGen
+      case ScalaCheck => TestGen.ScalaCheckGen
+      case Munit => TestGen.MunitGen
     }
   }
 

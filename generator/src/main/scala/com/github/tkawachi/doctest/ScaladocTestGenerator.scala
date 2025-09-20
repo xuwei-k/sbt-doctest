@@ -43,8 +43,5 @@ object ScaladocTestGenerator {
       .toSeq
   }
 
-  def findEncoding(scalacOptions: Seq[String]): Option[String] = scalacOptions match {
-    case Seq() => None
-    case Seq(_, tail*) => scalacOptions.zip(tail).collectFirst { case ("-encoding", enc) => enc }
-  }
+
 }

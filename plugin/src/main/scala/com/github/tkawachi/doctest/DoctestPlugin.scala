@@ -1,14 +1,12 @@
 package com.github.tkawachi.doctest
 
-import java.nio.file.Path
+import java.nio.charset.StandardCharsets
 import org.apache.commons.io.FilenameUtils
-import org.scalafmt.interfaces.Scalafmt
-import org.scalafmt.interfaces.ScalafmtSession
+import sbt.*
 import sbt.Keys.*
 import sbt.internal.io.Source
 import sbt.io.AllPassFilter
 import sbt.io.NothingFilter
-import sbt.{given, *}
 import scala.meta.Dialect
 import scala.meta.dialects
 
@@ -69,63 +67,9 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
 
   private val supportScalaBinaryVersions: Set[String] = Set("2.12", "2.13", "3")
 
-  // https://github.com/scalameta/scalafmt/blob/b78a999c191d5afc955/scalafmt-dynamic/jvm/src/main/scala/org/scalafmt/dynamic/ConsoleScalafmtReporter.scala
-  private class MyScalafmtReporter(log: Logger) extends org.scalafmt.interfaces.ScalafmtReporter {
-    def downloadOutputStreamWriter(): java.io.OutputStreamWriter =
-      new java.io.OutputStreamWriter(scala.Console.out)
-    def downloadWriter(): java.io.PrintWriter =
-      new java.io.PrintWriter(scala.Console.out)
-    def error(file: java.nio.file.Path, message: String): Unit =
-      log.error(s"error: ${file}: ${message}")
-    def error(file: java.nio.file.Path, e: Throwable): Unit = {
-      log.error(s"error: ${file}: ${e}")
-      e.printStackTrace()
-    }
-    def excluded(filename: java.nio.file.Path): Unit =
-      log.info(s"file excluded: $filename")
-    def parsedConfig(config: java.nio.file.Path, scalafmtVersion: String): Unit =
-      log.debug(s"parsed scalafmt config (v$scalafmtVersion): $config")
-  }
-
-  private val createScalafmtInstance: Def.Initialize[Task[Option[ScalafmtSession]]] =
-    Def.task {
-      val log = streams.value.log
-      if (doctestScalafmt.value) {
-        // https://github.com/scalameta/sbt-scalafmt/blob/e59fc02237374e6/plugin/src/main/scala/org/scalafmt/sbt/ScalafmtPlugin.scala#L42-L45
-        TaskKey[File]("scalafmtConfig").?.value.filter(_.isFile).map { conf =>
-          Scalafmt
-            .create(this.getClass.getClassLoader)
-            .withReporter(new MyScalafmtReporter(log))
-            .createSession(conf.toPath)
-        }
-      } else {
-        None
-      }
-    }
-
-  private def doctestScaladocGenTests(
-      sources: Seq[File],
-      testGen: TestGen,
-      decodeHtml: Boolean,
-      onlyCodeBlocksMode: Boolean,
-      scalacOptions: Seq[String],
-      dialect: Dialect
-  ) = {
-    val srcEncoding = ScaladocTestGenerator.findEncoding(scalacOptions).getOrElse("UTF-8")
-    sources
-      .filter(_.ext == "scala")
-      .flatMap(ScaladocTestGenerator(_, srcEncoding, testGen, decodeHtml, onlyCodeBlocksMode, dialect))
-  }
-
-  private def doctestMarkdownGenTests(finder: PathFinder, baseDirectoryPath: Path, testGen: TestGen) = {
-    finder
-      .filter(!_.isDirectory)
-      .get()
-      .sortBy(_.getCanonicalPath)
-      .zipWithIndex
-      .flatMap { case (file, disambiguatingIdx) =>
-        MarkdownTestGenerator(file, baseDirectoryPath, testGen, disambiguatingIdx.toString)
-      }
+  private def findEncoding(scalacOptions: Seq[String]): Option[String] = scalacOptions match {
+    case Seq() => None
+    case Seq(_, tail*) => scalacOptions.zip(tail).collectFirst { case ("-encoding", enc) => enc }
   }
 
   /**
@@ -202,50 +146,34 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
                 }
               }
             }
-          val scaladocTests = doctestScaladocGenTests(
-            filteredSourceFiles,
+
+          val input = Input(
+            filteredSourceFiles.filter(_.ext == "scala"),
+            findEncoding((Compile / scalacOptions).value).getOrElse("UTF-8"),
             testGen,
             doctestDecodeHtmlEntities.value,
             doctestOnlyCodeBlocksMode.value,
-            (Compile / scalacOptions).value,
-            doctestDialect.value
+            doctestDialect.value.toString(), // TODO
+            if (doctestMarkdownEnabled.value) {
+              doctestMarkdownPathFinder.value
+                .filter(!_.isDirectory)
+                .get()
+                .sortBy(_.getCanonicalPath)
+                .zipWithIndex
+            } else {
+              Nil
+            },
+            baseDirectory.value.toPath,
+            None
           )
-
-          val pathFinder = doctestMarkdownPathFinder.value
-          val baseDirectoryPath = baseDirectory.value.toPath
-          val markdownTests = if (doctestMarkdownEnabled.value) {
-            doctestMarkdownGenTests(pathFinder, baseDirectoryPath, testGen)
-          } else {
-            Seq.empty
-          }
-
-          (scaladocTests ++ markdownTests)
-            .groupBy(r => r.pkg -> r.basename)
-            .flatMap { case ((pkg, basename), results) =>
-              if (results.nonEmpty) {
-                log.debug(s"format ${results.size} files")
-              }
-              results.zipWithIndex.map { case (result, idx) =>
-                val writeBasename = if (idx == 0) basename else basename + idx
-                val writeDir = pkg.fold(testDir)(_.split("\\.").foldLeft(testDir) { (a: File, e: String) =>
-                  new File(a, e)
-                })
-                val writeFile = new File(writeDir, writeBasename + "Doctest.scala")
-                IO.write(writeFile, result.testSource)
-                createScalafmtInstance.value.foreach { fmt =>
-                  log.debug(s"format ${writeFile.getAbsolutePath}")
-                  IO.write(
-                    writeFile,
-                    fmt.format(
-                      writeFile.toPath,
-                      IO.read(writeFile)
-                    )
-                  )
-                }
-                writeFile
-              }
-            }
-            .toSeq
+          generateCode(
+            "sbt-doctest-gen",
+            input,
+            sbtLauncher(doctestGenTests).value,
+            (doctestGenTests / forkOptions).value,
+            Nil
+          )
+          null
       }
     },
     doctestGenTests := {
@@ -268,4 +196,68 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
   )
 
   val doctestSettings = doctestGenSettings
+
+  private def sbtLauncher[A](k: TaskKey[A]): Def.Initialize[Task[File]] = Def.taskDyn {
+    val v = (k / sbtVersion).value
+    Def.task {
+      val Seq(launcher) = getJarFiles("org.scala-sbt" % "sbt-launch" % v).value
+      launcher
+    }
+  }
+
+  private def getJarFiles(module: ModuleID): Def.Initialize[Task[Seq[File]]] = Def.task {
+    dependencyResolution.value
+      .retrieve(
+        dependencyId = module,
+        scalaModuleInfo = scalaModuleInfo.value,
+        retrieveDirectory = csrCacheDirectory.value,
+        log = streams.value.log
+      )
+      .left
+      .map(e => throw e.resolveException)
+      .merge
+      .distinct
+  }
+
+  private def generateCode(
+      projectName: String,
+      param: Input,
+      launcher: File,
+      forkOptions: ForkOptions,
+      extraSettings: Seq[String]
+  ): Either[Int, String] = {
+    val buildSbt =
+      s"""|autoScalaLibrary := false
+          |name := "${projectName}"
+          |logLevel := Level.Warn
+          |libraryDependencies += "io.github.sbt-doctest" % "doctest-generator" % "${DoctestBuildInfo.version}"
+          |${extraSettings.mkString("\n\n")}
+          |""".stripMargin
+
+    IO.withTemporaryDirectory { dir =>
+      val forkOpt = forkOptions.withWorkingDirectory(dir)
+      val out = dir / "out.json"
+      val in = dir / "in.json"
+      IO.write(dir / "build.sbt", buildSbt.getBytes(StandardCharsets.UTF_8))
+//      IO.write(in, input.toJsonString.getBytes(StandardCharsets.UTF_8))
+      val ret = Fork.java.apply(
+        forkOpt,
+        Seq(
+          "-jar",
+          launcher.getCanonicalPath,
+          Seq(
+            "runMain",
+            "com.github.tkawachi.doctest.GeneratorMain",
+            s"--input=${in.getCanonicalPath}",
+            s"--output=${out.getCanonicalPath}"
+          ).mkString(" ")
+        )
+      )
+      if (ret == 0) {
+        Right(IO.read(out))
+      } else {
+        Left(ret)
+      }
+    }
+  }
 }

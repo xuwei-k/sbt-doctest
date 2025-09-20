@@ -141,7 +141,46 @@ lazy val runtime = (projectMatrix in runtimeBase)
     name := "doctest-runtime"
   )
 
+lazy val common = (projectMatrix in file("common"))
+  .jvmPlatform(
+    scalaVersions = Seq(Scala212, Scala213, "3.7.2")
+  )
+  .settings(
+    commonSettings,
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %% "utest" % "0.8.4" % Test,
+      "org.scalatest" %% "scalatest-funspec" % "3.2.19" % Test,
+      "org.scalatestplus" %% "scalacheck-1-18" % "3.2.19.0" % Test,
+      "org.specs2" %% "specs2-scalacheck" % "4.21.0" % Test,
+      "io.monix" %% "minitest-laws" % "2.9.6" % Test
+    ),
+    name := "doctest-common"
+  )
+
+lazy val generator = (projectMatrix in file("generator"))
+  .dependsOn(common)
+  .jvmPlatform(
+    scalaVersions = Seq("2.13.16")
+  )
+  .settings(
+    commonSettings,
+    libraryDependencies ++= Seq(
+      "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0",
+      "org.scalameta" %% "scalafmt-dynamic" % "3.9.10",
+      "commons-io" % "commons-io" % "2.20.0",
+      "org.apache.commons" % "commons-text" % "1.14.0",
+      "org.scalameta" %% "scalameta" % "4.13.10",
+      "com.lihaoyi" %% "utest" % "0.8.4" % Test,
+      "org.scalatest" %% "scalatest-funspec" % "3.2.19" % Test,
+      "org.scalatestplus" %% "scalacheck-1-18" % "3.2.19.0" % Test,
+      "org.specs2" %% "specs2-scalacheck" % "4.21.0" % Test,
+      "io.monix" %% "minitest-laws" % "2.9.6" % Test
+    ),
+    name := "doctest-generator"
+  )
+
 lazy val plugin = (projectMatrix in file("plugin"))
+  .dependsOn(common)
   .enablePlugins(SbtPlugin)
   .jvmPlatform(
     scalaVersions = Seq(Scala212, "3.7.2")
