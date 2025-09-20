@@ -12,5 +12,6 @@ case class Input(
     dialect: String,
     markdownSource: Seq[(File, Int)],
     markdownRelativeTo: Path,
-    scalafmtConfig: Option[String]
+    scalafmtConfig: Option[String],
+    testDir: File
 )
