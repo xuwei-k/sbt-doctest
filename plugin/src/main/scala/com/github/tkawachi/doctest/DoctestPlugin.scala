@@ -183,11 +183,7 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
             Nil
           )
           val result = res.decodeFromJsonString[Output]
-          result.files.map { case (path, str) =>
-            val f = testDir / path
-            IO.write(f, str)
-            f
-          }.toSeq
+          result.files.map(file)
       }
     },
     doctestGenTests := {

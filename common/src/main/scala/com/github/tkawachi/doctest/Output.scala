@@ -4,7 +4,7 @@ import sjsonnew.BasicJsonProtocol.*
 import sjsonnew.JsonFormat
 
 case class Output(
-    files: Map[String, String]
+    files: Seq[String]
 ) extends OutputCommon
 
 object Output {

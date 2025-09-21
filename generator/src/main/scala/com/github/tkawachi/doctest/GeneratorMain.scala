@@ -7,8 +7,21 @@ import java.nio.file.Path
 import org.scalafmt.interfaces.Scalafmt
 
 object GeneratorMain {
+  private implicit class JsonStringOps(private val string: String) extends AnyVal {
+    def decodeFromJsonString[A](implicit r: sjsonnew.JsonReader[A]): A = {
+      val json = sjsonnew.support.scalajson.unsafe.Parser.parseUnsafe(string)
+      val unbuilder = new sjsonnew.Unbuilder(sjsonnew.support.scalajson.unsafe.Converter.facade)
+      r.read(Some(json), unbuilder)
+    }
+  }
+
   def main(args: Array[String]): Unit = {
-    def input: Input = ???
+    val path =
+      args
+        .collectFirst { case s"--input=${path}" => path }
+        .getOrElse(throw new IllegalArgumentException(args.mkString(" ")))
+    val str = new String(Files.readAllBytes(new File(path).toPath), StandardCharsets.UTF_8)
+    val input = str.decodeFromJsonString[Input]
 
     Seq(
       input.scaladocSources.flatMap { f =>
