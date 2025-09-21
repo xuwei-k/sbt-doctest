@@ -10,7 +10,7 @@ case class Input(
     base: String,
     scaladocSources: Seq[String],
     encoding: String,
-    testGen: TestGen,
+    testGen: TestGenType,
     decodeHtml: Boolean,
     onlyCodeBlocksMode: Boolean,
     dialect: String,
@@ -22,16 +22,16 @@ case class Input(
 
 object Input {
   implicit val formatInstance: JsonFormat[Input] = {
-    implicit val testGen: JsonFormat[TestGen] =
-      new JsonFormat[TestGen] {
-        override def write[J](obj: TestGen, builder: Builder[J]): Unit =
+    implicit val testGen: JsonFormat[TestGenType] =
+      new JsonFormat[TestGenType] {
+        override def write[J](obj: TestGenType, builder: Builder[J]): Unit =
           builder.writeString(obj.value)
 
-        override def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): TestGen = {
+        override def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): TestGenType = {
           jsOpt
             .flatMap { x =>
               val str = unbuilder.readString(x)
-              TestGen.values.find(_.value == str)
+              TestGenType.values.find(_.value == str)
             }
             .getOrElse(sys.error("not found"))
         }

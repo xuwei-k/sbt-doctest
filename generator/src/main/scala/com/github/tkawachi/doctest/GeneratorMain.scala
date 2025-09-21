@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import org.scalafmt.interfaces.Scalafmt
+import sjsonnew.support.scalajson.unsafe.CompactPrinter
 
 object GeneratorMain {
   private implicit class JsonStringOps(private val string: String) extends AnyVal {
@@ -15,20 +16,53 @@ object GeneratorMain {
     }
   }
 
+  private implicit class JsonOps[A](private val self: A) extends AnyVal {
+    def toJsonString(implicit w: sjsonnew.JsonWriter[A]): String = {
+      val builder = new sjsonnew.Builder(sjsonnew.support.scalajson.unsafe.Converter.facade)
+      w.write(self, builder)
+      CompactPrinter.apply(
+        builder.result.getOrElse(sys.error("invalid json"))
+      )
+    }
+  }
+
   def main(args: Array[String]): Unit = {
-    val path =
+    val inputPath =
       args
         .collectFirst { case s"--input=${path}" => path }
         .getOrElse(throw new IllegalArgumentException(args.mkString(" ")))
-    val str = new String(Files.readAllBytes(new File(path).toPath), StandardCharsets.UTF_8)
+    val str = new String(Files.readAllBytes(new File(inputPath).toPath), StandardCharsets.UTF_8)
     val input = str.decodeFromJsonString[Input]
+    val outputPath =
+      args
+        .collectFirst { case s"--output=${path}" => path }
+        .getOrElse(throw new IllegalArgumentException(args.mkString(" ")))
 
-    Seq(
+    val testGen = {
+      input.testGen match {
+        case TestGenType.MicroTest =>
+          MicroTestGen
+        case TestGenType.Minitest =>
+          MinitestGen
+        case TestGenType.Munit =>
+          MunitGen
+        case TestGenType.ScalaCheck =>
+          ScalaCheckGen
+        case TestGenType.ScalaTest30 =>
+          ScalaTest30Gen
+        case TestGenType.ScalaTest31 =>
+          ScalaTest31Gen
+        case TestGenType.Specs2 =>
+          Specs2TestGen
+      }
+    }
+
+    val files = Seq(
       input.scaladocSources.flatMap { f =>
         ScaladocTestGenerator(
           new File(input.base + "/" + f),
           input.encoding,
-          input.testGen,
+          testGen,
           input.decodeHtml,
           input.onlyCodeBlocksMode,
           scala.meta.dialects.Scala3 // TODO input.dialect
@@ -38,7 +72,7 @@ object GeneratorMain {
         MarkdownTestGenerator(
           f,
           new File(input.markdownRelativeTo).toPath,
-          input.testGen,
+          testGen,
           index.toString
         )
       }
@@ -73,6 +107,11 @@ object GeneratorMain {
         }
       }
       .toSeq
+
+    writeString(
+      new File(outputPath).toPath,
+      Output(files.map(_.getCanonicalPath)).toJsonString
+    )
   }
 
   private def writeString(path: Path, str: String): Unit =

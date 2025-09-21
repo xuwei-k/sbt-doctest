@@ -9,28 +9,28 @@ import sbt.librarymanagement.ModuleID
 import scala.util.Try
 
 object TestGenResolver {
-  def resolve(framework: DoctestTestFramework, scalaTestVersion: Option[String]): TestGen = {
+  def resolve(framework: DoctestTestFramework, scalaTestVersion: Option[String]): TestGenType = {
     framework match {
-      case MicroTest => TestGen.MicroTestGen
-      case Minitest => TestGen.MinitestGen
+      case MicroTest => TestGenType.MicroTest
+      case Minitest => TestGenType.Minitest
       case ScalaTest =>
         scalaTestVersion
           .flatMap {
             _.split('.').take(2).flatMap(s => Try(s.toInt).toOption) match {
               case Array(major, minor) =>
                 if (major < 3 || major == 3 && minor == 0) {
-                  Some(TestGen.ScalaTest30Gen)
+                  Some(TestGenType.ScalaTest30)
                 } else {
-                  Some(TestGen.ScalaTest31Gen)
+                  Some(TestGenType.ScalaTest31)
                 }
               case _ =>
                 None
             }
           }
           .getOrElse(throw new MessageOnlyException(s"Unexpected doctestScalaTestVersion version: $scalaTestVersion"))
-      case Specs2 => TestGen.Specs2TestGen
-      case ScalaCheck => TestGen.ScalaCheckGen
-      case Munit => TestGen.MunitGen
+      case Specs2 => TestGenType.Specs2
+      case ScalaCheck => TestGenType.ScalaCheck
+      case Munit => TestGenType.Munit
     }
   }
 

@@ -255,9 +255,10 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
   ): String = {
     val buildSbt =
       s"""|autoScalaLibrary := false
+          |Compile / sources := Nil
           |name := "${projectName}"
           |logLevel := Level.Warn
-          |libraryDependencies += "io.github.sbt-doctest" % "doctest-generator" % "${DoctestBuildInfo.version}"
+          |libraryDependencies := Seq("io.github.sbt-doctest" % "doctest-generator_2.13" % "${DoctestBuildInfo.version}")
           |${extraSettings.mkString("\n\n")}
           |""".stripMargin
 
