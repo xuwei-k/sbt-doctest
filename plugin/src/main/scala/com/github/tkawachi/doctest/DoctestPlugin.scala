@@ -7,8 +7,6 @@ import sbt.Keys.*
 import sbt.internal.io.Source
 import sbt.io.AllPassFilter
 import sbt.io.NothingFilter
-import scala.meta.Dialect
-import scala.meta.dialects
 import sjsonnew.support.scalajson.unsafe.CompactPrinter
 
 /**
@@ -58,7 +56,7 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
     val doctestIgnoreRegex =
       settingKey[Option[String]]("All sources that match the regex will not be used for tests generation")
     val doctestOnlyCodeBlocksMode = settingKey[Boolean]("Whether to treat all code in Scaladocs as pure code blocks.")
-    val doctestDialect = settingKey[Dialect]("dialect")
+    val doctestDialect = settingKey[DoctestDialect]("dialect")
     val doctestScalafmt = settingKey[Boolean]("format generated code by scalafmt")
 
     val DoctestTestFramework = self.DoctestTestFramework
@@ -106,13 +104,13 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
     doctestDialect := {
       scalaBinaryVersion.value match {
         case "2.12" =>
-          dialects.Scala212Source3
+          DoctestDialect.Scala212Source3
         case "2.13" =>
-          dialects.Scala213Source3
+          DoctestDialect.Scala213Source3
         case "3" =>
-          dialects.Scala3
+          DoctestDialect.Scala3
         case _ =>
-          dialects.Scala213Source3
+          DoctestDialect.Scala213Source3
       }
     },
     doctestGenTests := Def.uncached {
@@ -161,7 +159,7 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
             testGen,
             doctestDecodeHtmlEntities.value,
             doctestOnlyCodeBlocksMode.value,
-            doctestDialect.value.toString(), // TODO
+            doctestDialect.value,
             if (doctestMarkdownEnabled.value) {
               doctestMarkdownPathFinder.value
                 .filter(!_.isDirectory)
@@ -172,7 +170,12 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
               Nil
             },
             baseDirectory.value.getCanonicalPath,
-            None, // TODO
+            if (doctestScalafmt.value) {
+              // https://github.com/scalameta/sbt-scalafmt/blob/e59fc02237374e6/plugin/src/main/scala/org/scalafmt/sbt/ScalafmtPlugin.scala#L42-L45
+              TaskKey[File]("scalafmtConfig").?.value.filter(_.isFile).map(IO.read(_))
+            } else {
+              None
+            },
             testDir
           )
           val res = generateCode(

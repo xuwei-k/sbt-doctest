@@ -1,5 +1,9 @@
 package com.github.tkawachi.doctest
 
+import sjsonnew.Builder
+import sjsonnew.JsonFormat
+import sjsonnew.Unbuilder
+
 sealed abstract class TestGenType(val value: String) extends Product with Serializable
 
 object TestGenType {
@@ -21,4 +25,20 @@ object TestGenType {
     ScalaTest31,
     Specs2
   )
+
+  implicit val formatInstance: JsonFormat[TestGenType] =
+    new JsonFormat[TestGenType] {
+      override def write[J](obj: TestGenType, builder: Builder[J]): Unit =
+        builder.writeString(obj.value)
+
+      override def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): TestGenType = {
+        jsOpt
+          .flatMap { x =>
+            val str = unbuilder.readString(x)
+            TestGenType.values.find(_.value == str)
+          }
+          .getOrElse(sys.error("not found"))
+      }
+    }
+
 }

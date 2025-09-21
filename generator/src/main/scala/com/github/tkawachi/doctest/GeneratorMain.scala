@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import org.scalafmt.interfaces.Scalafmt
+import scala.meta.dialects
 import sjsonnew.support.scalajson.unsafe.CompactPrinter
 
 object GeneratorMain {
@@ -65,7 +66,18 @@ object GeneratorMain {
           testGen,
           input.decodeHtml,
           input.onlyCodeBlocksMode,
-          scala.meta.dialects.Scala3 // TODO input.dialect
+          input.dialect match {
+            case DoctestDialect.Scala212 =>
+              dialects.Scala212
+            case DoctestDialect.Scala213 =>
+              dialects.Scala213
+            case DoctestDialect.Scala212Source3 =>
+              dialects.Scala212Source3
+            case DoctestDialect.Scala213Source3 =>
+              dialects.Scala213Source3
+            case DoctestDialect.Scala3 =>
+              dialects.Scala3
+          }
         )
       },
       input.markdownSource.flatMap { case (f, index) =>

@@ -2,9 +2,7 @@ package com.github.tkawachi.doctest
 
 import java.io.File
 import sjsonnew.BasicJsonProtocol.*
-import sjsonnew.Builder
 import sjsonnew.JsonFormat
-import sjsonnew.Unbuilder
 
 case class Input(
     base: String,
@@ -13,7 +11,7 @@ case class Input(
     testGen: TestGenType,
     decodeHtml: Boolean,
     onlyCodeBlocksMode: Boolean,
-    dialect: String,
+    dialect: DoctestDialect,
     markdownSource: Seq[(File, Int)],
     markdownRelativeTo: String,
     scalafmtConfig: Option[String],
@@ -21,22 +19,7 @@ case class Input(
 ) extends InputCommon
 
 object Input {
-  implicit val formatInstance: JsonFormat[Input] = {
-    implicit val testGen: JsonFormat[TestGenType] =
-      new JsonFormat[TestGenType] {
-        override def write[J](obj: TestGenType, builder: Builder[J]): Unit =
-          builder.writeString(obj.value)
-
-        override def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): TestGenType = {
-          jsOpt
-            .flatMap { x =>
-              val str = unbuilder.readString(x)
-              TestGenType.values.find(_.value == str)
-            }
-            .getOrElse(sys.error("not found"))
-        }
-      }
-
+  implicit val formatInstance: JsonFormat[Input] =
     caseClass11(Input.apply, (_: Input).asTupleOption)(
       "base",
       "scaladocSources",
@@ -50,5 +33,4 @@ object Input {
       "scalafmtConfig",
       "testDir"
     )
-  }
 }
