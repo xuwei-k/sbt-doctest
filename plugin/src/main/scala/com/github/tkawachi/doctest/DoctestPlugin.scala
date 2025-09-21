@@ -9,7 +9,6 @@ import sbt.io.AllPassFilter
 import sbt.io.NothingFilter
 import scala.meta.Dialect
 import scala.meta.dialects
-
 import sjsonnew.support.scalajson.unsafe.CompactPrinter
 
 /**
@@ -172,7 +171,7 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
             } else {
               Nil
             },
-            baseDirectory.value.toPath,
+            baseDirectory.value.getCanonicalPath,
             None,
             testDir
           )
@@ -228,7 +227,6 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
       .merge
       .distinct
   }
-
 
   private implicit class JsonOps[A](private val self: A) extends AnyVal {
     def toJsonString(implicit w: sjsonnew.JsonWriter[A]): String = {

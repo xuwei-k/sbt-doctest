@@ -24,7 +24,7 @@ object GeneratorMain {
       input.markdownSource.flatMap { case (f, index) =>
         MarkdownTestGenerator(
           f,
-          input.markdownRelativeTo,
+          new File(input.markdownRelativeTo).toPath,
           input.testGen,
           index.toString
         )

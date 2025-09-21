@@ -1,7 +1,7 @@
 package com.github.tkawachi.doctest
 
 import java.io.File
-import java.nio.file.Path
+import sjsonnew.BasicJsonProtocol.*
 import sjsonnew.Builder
 import sjsonnew.JsonFormat
 import sjsonnew.Unbuilder
@@ -15,14 +15,13 @@ case class Input(
     onlyCodeBlocksMode: Boolean,
     dialect: String,
     markdownSource: Seq[(File, Int)],
-    markdownRelativeTo: Path,
+    markdownRelativeTo: String,
     scalafmtConfig: Option[String],
     testDir: File
 ) extends InputCommon
 
 object Input {
   implicit val formatInstance: JsonFormat[Input] = {
-    import sjsonnew.BasicJsonProtocol.*
     implicit val testGen: JsonFormat[TestGen] =
       new JsonFormat[TestGen] {
         override def write[J](obj: TestGen, builder: Builder[J]): Unit =
