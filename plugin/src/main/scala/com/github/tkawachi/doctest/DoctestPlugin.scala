@@ -172,17 +172,22 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
               Nil
             },
             baseDirectory.value.getCanonicalPath,
-            None,
+            None, // TODO
             testDir
           )
-          generateCode(
+          val res = generateCode(
             "sbt-doctest-gen",
             input,
             sbtLauncher(doctestGenTests).value,
             (doctestGenTests / forkOptions).value,
             Nil
           )
-          null
+          val result = res.decodeFromJsonString[Output]
+          result.files.map { case (path, str) =>
+            val f = testDir / path
+            IO.write(f, str)
+            f
+          }.toSeq
       }
     },
     doctestGenTests := {
@@ -228,6 +233,14 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
       .distinct
   }
 
+  private implicit class JsonStringOps(private val string: String) extends AnyVal {
+    def decodeFromJsonString[A](implicit r: sjsonnew.JsonReader[A]): A = {
+      val json = sjsonnew.support.scalajson.unsafe.Parser.parseUnsafe(string)
+      val unbuilder = new sjsonnew.Unbuilder(sjsonnew.support.scalajson.unsafe.Converter.facade)
+      r.read(Some(json), unbuilder)
+    }
+  }
+
   private implicit class JsonOps[A](private val self: A) extends AnyVal {
     def toJsonString(implicit w: sjsonnew.JsonWriter[A]): String = {
       val builder = new sjsonnew.Builder(sjsonnew.support.scalajson.unsafe.Converter.facade)
@@ -243,7 +256,7 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
       launcher: File,
       forkOptions: ForkOptions,
       extraSettings: Seq[String]
-  ): Either[Int, String] = {
+  ): String = {
     val buildSbt =
       s"""|autoScalaLibrary := false
           |name := "${projectName}"
@@ -272,9 +285,9 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
         )
       )
       if (ret == 0) {
-        Right(IO.read(out))
+        IO.read(out)
       } else {
-        Left(ret)
+        sys.error(s"failure ${ret}")
       }
     }
   }
