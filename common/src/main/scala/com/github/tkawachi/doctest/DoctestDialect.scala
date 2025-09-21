@@ -22,18 +22,8 @@ object DoctestDialect {
   )
 
   implicit val formatInstance: JsonFormat[DoctestDialect] =
-    new JsonFormat[DoctestDialect] {
-      override def write[J](obj: DoctestDialect, builder: Builder[J]): Unit =
-        builder.writeString(obj.value)
-
-      override def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): DoctestDialect = {
-        jsOpt
-          .flatMap { x =>
-            val str = unbuilder.readString(x)
-            DoctestDialect.values.find(_.value == str)
-          }
-          .getOrElse(sys.error("not found"))
-      }
-    }
-
+    DoctestSjsonNewUtil.formatFromString[DoctestDialect](
+      str => DoctestDialect.values.find(_.value == str),
+      _.value
+    )
 }

@@ -1,5 +1,6 @@
 package com.github.tkawachi.doctest
 
+import com.github.tkawachi.doctest.DoctestSjsonNewUtil.*
 import java.nio.charset.StandardCharsets
 import org.apache.commons.io.FilenameUtils
 import sbt.*
@@ -7,7 +8,6 @@ import sbt.Keys.*
 import sbt.internal.io.Source
 import sbt.io.AllPassFilter
 import sbt.io.NothingFilter
-import sjsonnew.support.scalajson.unsafe.CompactPrinter
 
 /**
  * Sbt plugin for doctest.
@@ -232,23 +232,6 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
       .distinct
   }
 
-  private implicit class JsonStringOps(private val string: String) extends AnyVal {
-    def decodeFromJsonString[A](implicit r: sjsonnew.JsonReader[A]): A = {
-      val json = sjsonnew.support.scalajson.unsafe.Parser.parseUnsafe(string)
-      val unbuilder = new sjsonnew.Unbuilder(sjsonnew.support.scalajson.unsafe.Converter.facade)
-      r.read(Some(json), unbuilder)
-    }
-  }
-
-  private implicit class JsonOps[A](private val self: A) extends AnyVal {
-    def toJsonString(implicit w: sjsonnew.JsonWriter[A]): String = {
-      val builder = new sjsonnew.Builder(sjsonnew.support.scalajson.unsafe.Converter.facade)
-      w.write(self, builder)
-      CompactPrinter.apply(
-        builder.result.getOrElse(sys.error("invalid json"))
-      )
-    }
-  }
   private def generateCode(
       projectName: String,
       input: Input,

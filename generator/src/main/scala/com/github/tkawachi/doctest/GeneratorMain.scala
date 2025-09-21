@@ -1,31 +1,14 @@
 package com.github.tkawachi.doctest
 
+import com.github.tkawachi.doctest.DoctestSjsonNewUtil.*
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import org.scalafmt.interfaces.Scalafmt
 import scala.meta.dialects
-import sjsonnew.support.scalajson.unsafe.CompactPrinter
 
 object GeneratorMain {
-  private implicit class JsonStringOps(private val string: String) extends AnyVal {
-    def decodeFromJsonString[A](implicit r: sjsonnew.JsonReader[A]): A = {
-      val json = sjsonnew.support.scalajson.unsafe.Parser.parseUnsafe(string)
-      val unbuilder = new sjsonnew.Unbuilder(sjsonnew.support.scalajson.unsafe.Converter.facade)
-      r.read(Some(json), unbuilder)
-    }
-  }
-
-  private implicit class JsonOps[A](private val self: A) extends AnyVal {
-    def toJsonString(implicit w: sjsonnew.JsonWriter[A]): String = {
-      val builder = new sjsonnew.Builder(sjsonnew.support.scalajson.unsafe.Converter.facade)
-      w.write(self, builder)
-      CompactPrinter.apply(
-        builder.result.getOrElse(sys.error("invalid json"))
-      )
-    }
-  }
 
   def main(args: Array[String]): Unit = {
     val inputPath =
@@ -56,6 +39,13 @@ object GeneratorMain {
         case TestGenType.Specs2 =>
           Specs2TestGen
       }
+    }
+    val scalafmtInstance = input.scalafmtConfig.map { conf =>
+      val scalafmtConf = new File(".scalafmt.conf")
+      writeString(scalafmtConf.toPath, conf)
+      Scalafmt
+        .create(this.getClass.getClassLoader)
+        .createSession(scalafmtConf.toPath)
     }
 
     val files = Seq(
@@ -98,13 +88,6 @@ object GeneratorMain {
           })
           val writeFile = new File(writeDir, writeBasename + "Doctest.scala")
           writeString(writeFile.toPath, result.testSource)
-          val scalafmtInstance = input.scalafmtConfig.map { conf =>
-            val scalafmtConf = new File(".scalafmt.conf")
-            writeString(scalafmtConf.toPath, conf)
-            Scalafmt
-              .create(this.getClass.getClassLoader)
-              .createSession(scalafmtConf.toPath)
-          }
 
           scalafmtInstance.foreach { fmt =>
             writeString(
@@ -127,7 +110,7 @@ object GeneratorMain {
   }
 
   private def writeString(path: Path, str: String): Unit = {
-    Files.createDirectories(path.getParent)
+    Files.createDirectories(path.toAbsolutePath.getParent)
     Files.write(path, str.getBytes(StandardCharsets.UTF_8))
   }
 }

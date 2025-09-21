@@ -27,18 +27,8 @@ object TestGenType {
   )
 
   implicit val formatInstance: JsonFormat[TestGenType] =
-    new JsonFormat[TestGenType] {
-      override def write[J](obj: TestGenType, builder: Builder[J]): Unit =
-        builder.writeString(obj.value)
-
-      override def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): TestGenType = {
-        jsOpt
-          .flatMap { x =>
-            val str = unbuilder.readString(x)
-            TestGenType.values.find(_.value == str)
-          }
-          .getOrElse(sys.error("not found"))
-      }
-    }
-
+    DoctestSjsonNewUtil.formatFromString[TestGenType](
+      str => TestGenType.values.find(_.value == str),
+      _.value
+    )
 }
