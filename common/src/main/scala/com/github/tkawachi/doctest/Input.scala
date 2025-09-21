@@ -14,4 +14,4 @@ case class Input(
     markdownRelativeTo: Path,
     scalafmtConfig: Option[String],
     testDir: File
-)
+) extends InputCommon

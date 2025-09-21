@@ -9,6 +9,11 @@ import sbt.io.AllPassFilter
 import sbt.io.NothingFilter
 import scala.meta.Dialect
 import scala.meta.dialects
+import sjsonnew.Builder
+import sjsonnew.JsonFormat
+import sjsonnew.JsonWriter
+import sjsonnew.Unbuilder
+import sjsonnew.support.scalajson.unsafe.CompactPrinter
 
 /**
  * Sbt plugin for doctest.
@@ -164,7 +169,8 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
               Nil
             },
             baseDirectory.value.toPath,
-            None
+            None,
+            testDir
           )
           generateCode(
             "sbt-doctest-gen",
@@ -219,9 +225,49 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
       .distinct
   }
 
+  private implicit val inputFormat: JsonWriter[Input] = {
+    import sjsonnew.BasicJsonProtocol.*
+    implicit val testGen: JsonFormat[TestGen] =
+      new JsonFormat[TestGen] {
+        override def write[J](obj: TestGen, builder: Builder[J]): Unit =
+          builder.writeString(obj.value)
+
+        override def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): TestGen = {
+          jsOpt
+            .flatMap { x =>
+              val str = unbuilder.readString(x)
+              TestGen.values.find(_.value == str)
+            }
+            .getOrElse(sys.error("not found"))
+        }
+      }
+
+    caseClass10(Input.apply, (_: Input).asTupleOption)(
+      "scaladocSources",
+      "encoding",
+      "testGen",
+      "decodeHtml",
+      "onlyCodeBlocksMode",
+      "dialect",
+      "markdownSource",
+      "markdownRelativeTo",
+      "scalafmtConfig",
+      "testDir"
+    )
+  }
+
+  private implicit class JsonOps[A](private val self: A) extends AnyVal {
+    def toJsonString(implicit w: sjsonnew.JsonWriter[A]): String = {
+      val builder = new sjsonnew.Builder(sjsonnew.support.scalajson.unsafe.Converter.facade)
+      w.write(self, builder)
+      CompactPrinter.apply(
+        builder.result.getOrElse(sys.error("invalid json"))
+      )
+    }
+  }
   private def generateCode(
       projectName: String,
-      param: Input,
+      input: Input,
       launcher: File,
       forkOptions: ForkOptions,
       extraSettings: Seq[String]
@@ -239,7 +285,7 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
       val out = dir / "out.json"
       val in = dir / "in.json"
       IO.write(dir / "build.sbt", buildSbt.getBytes(StandardCharsets.UTF_8))
-//      IO.write(in, input.toJsonString.getBytes(StandardCharsets.UTF_8))
+      IO.write(in, input.toJsonString.getBytes(StandardCharsets.UTF_8))
       val ret = Fork.java.apply(
         forkOpt,
         Seq(
