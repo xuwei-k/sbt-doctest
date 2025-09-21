@@ -68,7 +68,7 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
 
   private val supportScalaBinaryVersions: Set[String] = Set("2.12", "2.13", "3")
 
-  private def findEncoding(scalacOptions: Seq[String]): Option[String] = scalacOptions match {
+  private[doctest] def findEncoding(scalacOptions: Seq[String]): Option[String] = scalacOptions match {
     case Seq() => None
     case Seq(_, tail*) => scalacOptions.zip(tail).collectFirst { case ("-encoding", enc) => enc }
   }

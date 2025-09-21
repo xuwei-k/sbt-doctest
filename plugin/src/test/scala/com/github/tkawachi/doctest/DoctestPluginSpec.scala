@@ -1,10 +1,9 @@
 package com.github.tkawachi.doctest
 
+import com.github.tkawachi.doctest.DoctestPlugin.findEncoding
 import utest.*
 
-object ScaladocTestGeneratorSpec extends TestSuite {
-
-  import ScaladocTestGenerator.findEncoding
+object DoctestPluginSpec extends TestSuite {
 
   val tests = utest.Tests {
 

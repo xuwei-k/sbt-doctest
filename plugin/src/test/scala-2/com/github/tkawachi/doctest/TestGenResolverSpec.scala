@@ -33,7 +33,7 @@ object TestGenResolverSpec extends TestSuite {
 
     "resolve(ScalaTest, 3.0.9)" - {
       val result = TestGenResolver.resolve(DoctestTestFramework.ScalaTest, Some("3.0.9"))
-      assert(result == ScalaTest30Gen)
+      assert(result == TestGen.ScalaTest30Gen)
     }
   }
 }

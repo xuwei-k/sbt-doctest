@@ -14,7 +14,7 @@ object ScaladocExtractorSpec extends TestSuite {
 
     def extractFromFile(path: String) =
       ScaladocExtractor.extractFromFile(
-        Paths.get("plugin/" + path),
+        Paths.get("generator/" + path),
         StandardCharsets.UTF_8.name(),
         dialects.Scala213Source3
       )
