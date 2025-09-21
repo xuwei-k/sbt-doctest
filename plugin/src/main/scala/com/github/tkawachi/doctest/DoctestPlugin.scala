@@ -9,10 +9,7 @@ import sbt.io.AllPassFilter
 import sbt.io.NothingFilter
 import scala.meta.Dialect
 import scala.meta.dialects
-import sjsonnew.Builder
-import sjsonnew.JsonFormat
-import sjsonnew.JsonWriter
-import sjsonnew.Unbuilder
+
 import sjsonnew.support.scalajson.unsafe.CompactPrinter
 
 /**
@@ -152,8 +149,15 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
               }
             }
 
+          val localBase = (LocalRootProject / baseDirectory).value
+
           val input = Input(
-            filteredSourceFiles.filter(_.ext == "scala"),
+            localBase.getCanonicalPath,
+            filteredSourceFiles
+              .filter(_.ext == "scala")
+              .flatMap(
+                IO.relativize(localBase, _)
+              ),
             findEncoding((Compile / scalacOptions).value).getOrElse("UTF-8"),
             testGen,
             doctestDecodeHtmlEntities.value,
@@ -225,36 +229,6 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
       .distinct
   }
 
-  private implicit val inputFormat: JsonWriter[Input] = {
-    import sjsonnew.BasicJsonProtocol.*
-    implicit val testGen: JsonFormat[TestGen] =
-      new JsonFormat[TestGen] {
-        override def write[J](obj: TestGen, builder: Builder[J]): Unit =
-          builder.writeString(obj.value)
-
-        override def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): TestGen = {
-          jsOpt
-            .flatMap { x =>
-              val str = unbuilder.readString(x)
-              TestGen.values.find(_.value == str)
-            }
-            .getOrElse(sys.error("not found"))
-        }
-      }
-
-    caseClass10(Input.apply, (_: Input).asTupleOption)(
-      "scaladocSources",
-      "encoding",
-      "testGen",
-      "decodeHtml",
-      "onlyCodeBlocksMode",
-      "dialect",
-      "markdownSource",
-      "markdownRelativeTo",
-      "scalafmtConfig",
-      "testDir"
-    )
-  }
 
   private implicit class JsonOps[A](private val self: A) extends AnyVal {
     def toJsonString(implicit w: sjsonnew.JsonWriter[A]): String = {

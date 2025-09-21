@@ -4,6 +4,7 @@ import sbt.Def
 def Scala212 = "2.12.20"
 def Scala213 = "2.13.16"
 def Scala3 = "3.3.6"
+def sbt2version = "2.0.0-RC4"
 val scalaVersions = Seq(Scala212, Scala213, Scala3)
 
 val commonSettings = Def.settings(
@@ -147,6 +148,15 @@ lazy val common = (projectMatrix in file("common"))
   )
   .settings(
     commonSettings,
+    libraryDependencies += {
+      // Don't update. use same version as sbt
+      scalaBinaryVersion.value match {
+        case "3" =>
+          "com.eed3si9n" %% "sjson-new-scalajson" % sjsonNewVersion(sbt2version, "3")
+        case _ =>
+          "com.eed3si9n" %% "sjson-new-scalajson" % sjsonNewVersion(sbtVersion.value, "2.12")
+      }
+    },
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "utest" % "0.8.4" % Test,
       "org.scalatest" %% "scalatest-funspec" % "3.2.19" % Test,
@@ -218,7 +228,7 @@ lazy val plugin = (projectMatrix in file("plugin"))
         case "2.12" =>
           sbtVersion.value
         case _ =>
-          "2.0.0-RC4"
+          sbt2version
       }
     },
     name := "sbt-doctest",
@@ -253,3 +263,42 @@ lazy val plugin = (projectMatrix in file("plugin"))
 
 commonSettings
 publish / skip := true
+
+def sjsonNewVersion(sbtV: String, scalaBinaryV: String): String = reverseDependencyVersion(
+  "org.scala-sbt",
+  "sbt",
+  sbtV,
+  "com.eed3si9n",
+  s"sjson-new-scalajson_${scalaBinaryV}"
+)
+
+def reverseDependencyVersion(
+    baseGroupId: String,
+    baseArtifactId: String,
+    revision: String,
+    targetGroupId: String,
+    targetArtifactId: String
+): String = {
+  import lmcoursier.internal.shaded.coursier
+  val dependency = coursier.Dependency(
+    coursier.Module(
+      coursier.Organization(
+        baseGroupId
+      ),
+      coursier.ModuleName(
+        baseArtifactId
+      )
+    ),
+    revision
+  )
+  coursier.Fetch().addDependencies(dependency).runResult().detailedArtifacts.map(_._1).collect {
+    case x if (x.module.organization.value == targetGroupId) && (x.module.name.value == targetArtifactId) => x.version
+  } match {
+    case Seq(x) =>
+      x
+    case Nil =>
+      sys.error("not found")
+    case xs =>
+      sys.error(xs.toString)
+  }
+}

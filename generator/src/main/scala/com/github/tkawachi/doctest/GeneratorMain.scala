@@ -13,7 +13,7 @@ object GeneratorMain {
     Seq(
       input.scaladocSources.flatMap { f =>
         ScaladocTestGenerator(
-          f,
+          new File(input.base + "/" + f),
           input.encoding,
           input.testGen,
           input.decodeHtml,
