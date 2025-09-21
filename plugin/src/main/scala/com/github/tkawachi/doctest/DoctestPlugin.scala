@@ -254,10 +254,10 @@ object DoctestPlugin extends AutoPlugin with DoctestCompat {
       extraSettings: Seq[String]
   ): String = {
     val buildSbt =
-      s"""|autoScalaLibrary := false
+      s"""|//autoScalaLibrary := false
+          |scalaVersion := "2.13.16"
           |Compile / sources := Nil
           |name := "${projectName}"
-          |logLevel := Level.Warn
           |libraryDependencies := Seq("io.github.sbt-doctest" % "doctest-generator_2.13" % "${DoctestBuildInfo.version}")
           |${extraSettings.mkString("\n\n")}
           |""".stripMargin

@@ -85,10 +85,10 @@ object GeneratorMain {
             new File(a, e)
           })
           val writeFile = new File(writeDir, writeBasename + "Doctest.scala")
+          writeString(writeFile.toPath, result.testSource)
           val scalafmtInstance = input.scalafmtConfig.map { conf =>
             val scalafmtConf = new File(".scalafmt.conf")
             writeString(scalafmtConf.toPath, conf)
-            writeString(writeFile.toPath, result.testSource)
             Scalafmt
               .create(this.getClass.getClassLoader)
               .createSession(scalafmtConf.toPath)
@@ -106,7 +106,7 @@ object GeneratorMain {
           writeFile
         }
       }
-      .toSeq
+      .toList
 
     writeString(
       new File(outputPath).toPath,
@@ -114,6 +114,8 @@ object GeneratorMain {
     )
   }
 
-  private def writeString(path: Path, str: String): Unit =
+  private def writeString(path: Path, str: String): Unit = {
+    Files.createDirectories(path.getParent)
     Files.write(path, str.getBytes(StandardCharsets.UTF_8))
+  }
 }
