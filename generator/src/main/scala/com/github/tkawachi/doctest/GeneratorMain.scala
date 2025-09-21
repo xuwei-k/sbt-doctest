@@ -45,6 +45,7 @@ object GeneratorMain {
       writeString(scalafmtConf.toPath, conf)
       Scalafmt
         .create(this.getClass.getClassLoader)
+        .withReporter(new DoctestScalafmtReporter)
         .createSession(scalafmtConf.toPath)
     }
 
