@@ -11,7 +11,7 @@ To use this plugin, add it to your `project/plugins.sbt`.
 addSbtPlugin("io.github.sbt-doctest" % "sbt-doctest" % "0.13.1")
 ```
 
-This plugin supports sbt 1.x and 2.x.
+This plugin supports sbt 1.x and 2.x. sbt-doctest requires JDK 11 or higher.
 
 It's automatically enabled.
 
