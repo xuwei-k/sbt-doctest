@@ -24,7 +24,7 @@ jobs:
       with:
         java-version: ${{matrix.java}}
         distribution: zulu
-    - uses: coursier/cache-action@v9.0.1
+    - uses: coursier/cache-action@v5
     - uses: sbt/setup-sbt@v1.5.15
     - run: sbt -v
            --server
