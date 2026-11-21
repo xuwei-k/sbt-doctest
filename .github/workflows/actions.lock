@@ -4,7 +4,7 @@
 version: 'v0.0.3'
 workflows:
     '.github/workflows/ci.yml':
-        - 'actions/checkout@v7.0.1'
+        - 'actions/checkout@1.0.0'
         - 'actions/setup-java@v6.2.0'
         - 'coursier/cache-action@v9.0.1'
         - 'sbt/setup-sbt@v1.5.15'
@@ -14,9 +14,9 @@ dependencies:
         commit: 'sha1-55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
         owner_id: 44036562
         repo_id: 215566462
-    'actions/checkout@v7.0.1':
-        ref: 'v7.0.1'
-        commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
+    'actions/checkout@1.0.0':
+        ref: '1.0.0'
+        commit: 'sha1-af513c7a016048ae468971c52ed77d9562c7c819'
         owner_id: 44036562
         repo_id: 197814629
     'actions/setup-java@v6.2.0':

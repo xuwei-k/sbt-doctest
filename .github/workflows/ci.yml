@@ -15,7 +15,7 @@ jobs:
           - java: 17
           - java: 25
     steps:
-    - uses: actions/checkout@v7.0.1
+    - uses: actions/checkout@1.0.0
     - run: gh extension install github/gh-actions-lock
     - run: gh actions-lock --verify
       env:
